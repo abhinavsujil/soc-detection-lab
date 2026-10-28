@@ -1,0 +1,49 @@
+<!--
+  Sysmon Configuration Schema v4.90
+  Tailored for Enterprise SOC Detection Lab
+  Focus: Capturing LSASS access, LOLBins, PowerShell, and Registry Tampering
+-->
+<Sysmon schemaversion="4.90">
+  <HashAlgorithms>md5,sha256</HashAlgorithms>
+  <EventFiltering>
+
+    <!-- Event ID 1: Process Creation -->
+    <RuleGroup name="ProcessCreate" groupRelation="or">
+      <ProcessCreate onmatch="include">
+        <Image condition="image">powershell.exe</Image>
+        <Image condition="image">cmd.exe</Image>
+        <Image condition="image">rundll32.exe</Image>
+        <Image condition="image">schtasks.exe</Image>
+        <Image condition="image">reg.exe</Image>
+        <Image condition="image">wmic.exe</Image>
+        <CommandLine condition="contains">-Enc</CommandLine>
+        <CommandLine condition="contains">MiniDump</CommandLine>
+      </ProcessCreate>
+    </RuleGroup>
+
+    <!-- Event ID 10: ProcessAccess (Crucial for T1003.001 LSASS Memory Dumping) -->
+    <RuleGroup name="ProcessAccess" groupRelation="or">
+      <ProcessAccess onmatch="include">
+        <TargetImage condition="is">C:\Windows\System32\lsass.exe</TargetImage>
+      </ProcessAccess>
+    </RuleGroup>
+
+    <!-- Event ID 11: FileCreate (Dump files and payload drops) -->
+    <RuleGroup name="FileCreate" groupRelation="or">
+      <FileCreate onmatch="include">
+        <TargetFilename condition="end with">.dmp</TargetFilename>
+        <TargetFilename condition="contains">\Temp\</TargetFilename>
+        <TargetFilename condition="contains">\Users\Public\</TargetFilename>
+      </FileCreate>
+    </RuleGroup>
+
+    <!-- Event ID 13: RegistryEvent (Value Set - Defender Tampering) -->
+    <RuleGroup name="RegistryValueSet" groupRelation="or">
+      <RegistryEvent onmatch="include">
+        <TargetObject condition="contains">Windows Defender\Real-Time Protection</TargetObject>
+        <TargetObject condition="contains">CurrentVersion\Run</TargetObject>
+      </RegistryEvent>
+    </RuleGroup>
+
+  </EventFiltering>
+</Sysmon>

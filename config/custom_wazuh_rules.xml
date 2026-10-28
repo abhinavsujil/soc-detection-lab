@@ -1,0 +1,75 @@
+<!-- 
+  Custom Wazuh Detection Rules for Enterprise SOC Detection Lab
+  Location on Wazuh Manager: /var/ossec/etc/rules/local_rules.xml
+-->
+
+<group name="windows,sysmon,mitre_attack,">
+
+  <!-- T1003.001 - Credential Dumping: LSASS Memory Access via Rundll32/ProcDump -->
+  <rule id="100101" level="12">
+    <if_sid>61600</if_sid> <!-- Base Sysmon Event Channel rule -->
+    <field name="win.system.eventID">^10$</field>
+    <field name="win.eventdata.targetImage">.*\\lsass\.exe</field>
+    <field name="win.eventdata.sourceImage">.*(rundll32\.exe|procdump.*\.exe|comsvcs\.dll)</field>
+    <description>MITRE ATT&amp;CK T1003.001: Suspicious Process Accessed LSASS Memory - Potential Credential Dumping</description>
+    <mitre>
+      <id>T1003.001</id>
+    </mitre>
+    <group>credential_access,privilege_escalation,</group>
+  </rule>
+
+  <!-- T1059.001 - Command and Scripting: PowerShell Encoded Command Execution -->
+  <rule id="100102" level="10">
+    <if_sid>61600</if_sid>
+    <field name="win.system.eventID">^1$</field>
+    <field name="win.eventdata.image">.*\\powershell\.exe</field>
+    <field name="win.eventdata.commandLine">(?i).*\s(-enc|-encodedcommand|-e)\s+.*</field>
+    <description>MITRE ATT&amp;CK T1059.001: Obfuscated or Base64 Encoded PowerShell Command Detected</description>
+    <mitre>
+      <id>T1059.001</id>
+    </mitre>
+    <group>execution,defense_evasion,</group>
+  </rule>
+
+  <!-- T1053.005 - Persistence: Suspicious Scheduled Task Creation -->
+  <rule id="100103" level="8">
+    <if_sid>61600</if_sid>
+    <field name="win.system.eventID">^1$</field>
+    <field name="win.eventdata.image">.*\\schtasks\.exe</field>
+    <field name="win.eventdata.commandLine">(?i).*/create\s+.*</field>
+    <description>MITRE ATT&amp;CK T1053.005: New Scheduled Task Created via Command Line (Persistence)</description>
+    <mitre>
+      <id>T1053.005</id>
+    </mitre>
+    <group>persistence,privilege_escalation,</group>
+  </rule>
+
+  <!-- T1562.001 - Impair Defenses: Windows Defender Real-Time Protection Disabled -->
+  <rule id="100104" level="14">
+    <if_sid>61600</if_sid>
+    <field name="win.system.eventID">^13$</field>
+    <field name="win.eventdata.targetObject">.*Microsoft\\Windows\sDefender\\Real-Time\sProtection\\DisableRealtimeMonitoring</field>
+    <field name="win.eventdata.details">^DWORD\s\(0x00000001\)$</field>
+    <description>MITRE ATT&amp;CK T1562.001: Windows Defender Real-Time Monitoring Disabled via Registry Tampering</description>
+    <mitre>
+      <id>T1562.001</id>
+    </mitre>
+    <group>defense_evasion,</group>
+  </rule>
+
+</group>
+
+<group name="linux,auth,bruteforce,">
+
+  <!-- T1110.001 - Brute Force: SSH Multiple Failed Authentication Attempts -->
+  <rule id="100201" level="10" frequency="6" timeframe="120">
+    <if_matched_sid>5503</if_matched_sid> <!-- Base User authentication failed rule -->
+    <same_source_ip />
+    <description>MITRE ATT&amp;CK T1110.001: Potential SSH Brute Force Attack Detected (Multiple Failures from Same Source IP within 2 Minutes)</description>
+    <mitre>
+      <id>T1110.001</id>
+    </mitre>
+    <group>authentication_failures,initial_access,</group>
+  </rule>
+
+</group>
